@@ -26,7 +26,7 @@ export function Sidebar() {
       <div className="p-4 border-b">
         <div className="flex items-center gap-2 font-bold text-lg">
           <FileText className="h-5 w-5 text-primary" />
-          <span>Legalese</span>
+          <span>Contract Clarity</span>
         </div>
         <p className="text-xs text-muted-foreground mt-1">Contract Intelligence</p>
       </div>

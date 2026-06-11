@@ -189,8 +189,8 @@ function ClerkProviderWithRoutes() {
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
-        signIn: { start: { title: "Welcome back to Legalese", subtitle: "Sign in to access your contracts" } },
-        signUp: { start: { title: "Get started with Legalese", subtitle: "Create your account to review contracts with AI" } },
+        signIn: { start: { title: "Welcome back to Contract Clarity", subtitle: "Sign in to access your contracts" } },
+        signUp: { start: { title: "Get started with Contract Clarity", subtitle: "Create your account to review contracts with AI" } },
       }}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}

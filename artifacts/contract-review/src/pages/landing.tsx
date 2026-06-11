@@ -11,7 +11,7 @@ export default function Landing() {
       <header className="border-b px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-lg">
           <FileText className="h-5 w-5 text-primary" />
-          <span>Legalese</span>
+          <span>Contract Clarity</span>
         </div>
         <div className="flex gap-2">
           <Link href="/sign-in">
@@ -34,7 +34,7 @@ export default function Landing() {
             Review contracts smarter,<br /> negotiate faster.
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Legalese automatically flags risky clauses, summarizes key terms, tracks changes, and helps you negotiate with confidence — all in one place.
+            Contract Clarity automatically flags risky clauses, summarizes key terms, tracks changes, and helps you negotiate with confidence — all in one place.
           </p>
           <div className="flex gap-4 justify-center pt-2">
             <Link href="/sign-up">
@@ -100,7 +100,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t px-6 py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Legalese — Contract Intelligence
+        © {new Date().getFullYear()} Contract Clarity — Contract Intelligence
       </footer>
     </div>
   );

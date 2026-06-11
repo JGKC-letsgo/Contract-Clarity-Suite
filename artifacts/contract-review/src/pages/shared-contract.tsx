@@ -44,7 +44,7 @@ export default function SharedContract({ token }: { token: string }) {
       {/* Read-only Banner */}
       <div className="bg-primary/5 border-b px-6 py-2 flex items-center gap-2 text-sm text-muted-foreground">
         <Lock className="h-3.5 w-3.5" />
-        <span>This is a <strong>read-only</strong> shared view. To review or edit this contract, log in to Legalese.</span>
+        <span>This is a <strong>read-only</strong> shared view. To review or edit this contract, log in to Contract Clarity.</span>
       </div>
 
       <div className="p-8 max-w-5xl mx-auto space-y-8">
