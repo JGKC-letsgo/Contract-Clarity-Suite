@@ -3,20 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Contract Review API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: contracts
+    description: Contract management
+  - name: versions
+    description: Version control
+  - name: comments
+    description: Inline comments
+  - name: risks
+    description: Risk analysis
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +31,328 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /contracts:
+    get:
+      operationId: listContracts
+      tags: [contracts]
+      summary: List all contracts
+      responses:
+        "200":
+          description: List of contracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contract"
+    post:
+      operationId: createContract
+      tags: [contracts]
+      summary: Create a new contract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+
+  /contracts/{id}:
+    get:
+      operationId: getContract
+      tags: [contracts]
+      summary: Get contract with latest version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contract detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateContract
+      tags: [contracts]
+      summary: Update contract metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+    delete:
+      operationId: deleteContract
+      tags: [contracts]
+      summary: Delete a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /contracts/{id}/versions:
+    get:
+      operationId: listVersions
+      tags: [versions]
+      summary: List all versions of a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContractVersion"
+    post:
+      operationId: createVersion
+      tags: [versions]
+      summary: Save a new version (tracked change)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionInput"
+      responses:
+        "201":
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractVersion"
+
+  /contracts/{id}/versions/{versionId}:
+    get:
+      operationId: getVersion
+      tags: [versions]
+      summary: Get a specific version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Version detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractVersion"
+
+  /contracts/{id}/comments:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: List comments on a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Add a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /contracts/{id}/comments/{commentId}:
+    patch:
+      operationId: updateComment
+      tags: [comments]
+      summary: Update a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+    delete:
+      operationId: deleteComment
+      tags: [comments]
+      summary: Delete a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /contracts/{id}/analyze:
+    post:
+      operationId: analyzeContract
+      tags: [risks]
+      summary: Run AI analysis — returns risks and summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+
+  /contracts/{id}/risks:
+    get:
+      operationId: listRisks
+      tags: [risks]
+      summary: Get risk highlights for a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Risk highlights
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskHighlight"
+
+  /contracts/{id}/summary:
+    get:
+      operationId: getContractSummary
+      tags: [risks]
+      summary: Get AI-generated summary of a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contract summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractSummary"
+
+  /contracts/stats:
+    get:
+      operationId: getContractStats
+      tags: [contracts]
+      summary: Dashboard stats — counts by risk level, recent activity
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +363,253 @@ components:
       required:
         - status
 
+    Contract:
+      type: object
+      required: [id, title, status, createdAt, updatedAt, versionCount, commentCount, riskCount]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, under_review, approved, rejected]
+        parties:
+          type: ["string", "null"]
+        effectiveDate:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
+        riskLevel:
+          type: ["string", "null"]
+          enum: [low, medium, high, critical, null]
+        summaryText:
+          type: ["string", "null"]
+        analyzed:
+          type: boolean
+        versionCount:
+          type: integer
+        commentCount:
+          type: integer
+        riskCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ContractDetail:
+      type: object
+      required: [id, title, status, content, currentVersionId, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, under_review, approved, rejected]
+        parties:
+          type: ["string", "null"]
+        effectiveDate:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
+        riskLevel:
+          type: ["string", "null"]
+          enum: [low, medium, high, critical, null]
+        summaryText:
+          type: ["string", "null"]
+        analyzed:
+          type: boolean
+        content:
+          type: string
+        currentVersionId:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ContractInput:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+          minLength: 1
+        parties:
+          type: string
+        effectiveDate:
+          type: string
+        expiryDate:
+          type: string
+        status:
+          type: string
+          enum: [draft, under_review, approved, rejected]
+
+    ContractUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        parties:
+          type: string
+        effectiveDate:
+          type: string
+        expiryDate:
+          type: string
+        status:
+          type: string
+          enum: [draft, under_review, approved, rejected]
+
+    ContractVersion:
+      type: object
+      required: [id, contractId, versionNumber, content, authorName, changeNote, createdAt]
+      properties:
+        id:
+          type: integer
+        contractId:
+          type: integer
+        versionNumber:
+          type: integer
+        content:
+          type: string
+        authorName:
+          type: string
+        changeNote:
+          type: string
+        createdAt:
+          type: string
+
+    VersionInput:
+      type: object
+      required: [content, authorName, changeNote]
+      properties:
+        content:
+          type: string
+          minLength: 1
+        authorName:
+          type: string
+          minLength: 1
+        changeNote:
+          type: string
+          minLength: 1
+
+    Comment:
+      type: object
+      required: [id, contractId, authorName, text, resolved, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        contractId:
+          type: integer
+        versionId:
+          type: ["integer", "null"]
+        authorName:
+          type: string
+        text:
+          type: string
+        selectedText:
+          type: ["string", "null"]
+        resolved:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    CommentInput:
+      type: object
+      required: [authorName, text]
+      properties:
+        authorName:
+          type: string
+          minLength: 1
+        text:
+          type: string
+          minLength: 1
+        selectedText:
+          type: string
+        versionId:
+          type: integer
+
+    CommentUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+        resolved:
+          type: boolean
+
+    RiskHighlight:
+      type: object
+      required: [id, contractId, riskLevel, clause, explanation, category, createdAt]
+      properties:
+        id:
+          type: integer
+        contractId:
+          type: integer
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        clause:
+          type: string
+        explanation:
+          type: string
+        category:
+          type: string
+        createdAt:
+          type: string
+
+    AnalysisResult:
+      type: object
+      required: [summary, riskLevel, risks]
+      properties:
+        summary:
+          type: string
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        risks:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskHighlight"
+
+    ContractSummary:
+      type: object
+      required: [contractId, summaryText, riskLevel, analyzed]
+      properties:
+        contractId:
+          type: integer
+        summaryText:
+          type: ["string", "null"]
+        riskLevel:
+          type: ["string", "null"]
+          enum: [low, medium, high, critical, null]
+        analyzed:
+          type: boolean
+
+    ContractStats:
+      type: object
+      required: [total, byStatus, byRiskLevel, recentlyAnalyzed, totalComments, totalVersions]
+      properties:
+        total:
+          type: integer
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        byRiskLevel:
+          type: object
+          additionalProperties:
+            type: integer
+        recentlyAnalyzed:
+          type: integer
+        totalComments:
+          type: integer
+        totalVersions:
+          type: integer

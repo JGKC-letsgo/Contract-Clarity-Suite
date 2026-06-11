@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Contract Review"
+version = "1.0.0"
+id = "artifacts/contract-review"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25623
+
+[services.development]
+run = "pnpm --filter @workspace/contract-review run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/contract-review", "run", "build" ]
+publicDir = "artifacts/contract-review/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25623"
+BASE_PATH = "/"
