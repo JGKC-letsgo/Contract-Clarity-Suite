@@ -120,7 +120,7 @@ export default function VideoTemplate({
               />
             </svg>
           </div>
-          Legalese
+          Contract Clarity
         </motion.div>
 
         {/* Persistent Scene Progress Dots — hidden on intro */}

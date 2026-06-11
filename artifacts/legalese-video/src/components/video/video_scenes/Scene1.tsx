@@ -38,7 +38,7 @@ export function Scene1() {
           animate={phase >= 1 ? { y: 0 } : { y: '100%' }}
           transition={{ type: 'spring', stiffness: 100, damping: 20 }}
         >
-          Legalese
+          Contract Clarity
         </motion.h1>
       </div>
 

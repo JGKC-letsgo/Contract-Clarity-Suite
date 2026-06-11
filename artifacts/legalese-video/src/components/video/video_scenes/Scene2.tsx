@@ -37,7 +37,7 @@ export function Scene2() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          Drag & drop PDF or DOCX. Legalese instantly extracts text and structural clauses.
+          Drag & drop PDF or DOCX. Contract Clarity instantly extracts text and structural clauses.
         </motion.p>
         
         <motion.div

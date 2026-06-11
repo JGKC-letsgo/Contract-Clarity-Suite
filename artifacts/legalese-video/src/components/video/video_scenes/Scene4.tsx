@@ -72,10 +72,10 @@ export function Scene4() {
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
           >
             <div className="flex items-center gap-3 mb-4 border-b border-slate-800 pb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">L</div>
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">C</div>
               <div>
-                <div className="text-sm font-bold text-white">Legalese Alerts</div>
-                <div className="text-xs text-slate-400">alert@legalese.app</div>
+                <div className="text-sm font-bold text-white">Contract Clarity Alerts</div>
+                <div className="text-xs text-slate-400">alert@contractclarity.app</div>
               </div>
               <div className="ml-auto text-xs text-slate-500">Just now</div>
             </div>

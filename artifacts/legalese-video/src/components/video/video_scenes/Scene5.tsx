@@ -47,7 +47,7 @@ export function Scene5() {
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >
         <div className="inline-flex items-center justify-center px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-xl shadow-xl shadow-white/10 relative overflow-hidden group">
-          <span className="relative z-10">legalese.app</span>
+          <span className="relative z-10">contractclarity.app</span>
           <div className="absolute inset-0 bg-blue-50 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300" />
         </div>
       </motion.div>
