@@ -1,6 +1,6 @@
 kind = "video"
 previewPath = "/legalese-video/"
-title = "Legalese — Product Video"
+title = "Contract Clarity — Product Video"
 version = "1.0.0"
 id = "artifacts/legalese-video"
 router = "path"
