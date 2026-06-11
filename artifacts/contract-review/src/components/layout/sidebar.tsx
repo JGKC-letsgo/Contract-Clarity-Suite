@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { FileText, LayoutDashboard, Plus, Settings } from "lucide-react";
+import { FileText, LayoutDashboard, Plus, Settings, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Sidebar() {
@@ -9,6 +9,7 @@ export function Sidebar() {
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/contracts/new", label: "New Contract", icon: Plus },
+    { href: "/templates", label: "Templates", icon: LayoutTemplate },
   ];
 
   return (

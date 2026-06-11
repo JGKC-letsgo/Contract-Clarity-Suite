@@ -23,6 +23,8 @@ export interface ContractDetail {
   /** @nullable */
   summaryText?: string | null;
   analyzed?: boolean;
+  /** @nullable */
+  shareToken?: string | null;
   content: string;
   currentVersionId: number;
   createdAt: string;

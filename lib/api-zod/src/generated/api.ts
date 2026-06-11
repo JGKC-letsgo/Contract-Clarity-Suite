@@ -17,8 +17,15 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary List all contracts
+ * @summary List all contracts with optional search/filter
  */
+export const ListContractsQueryParams = zod.object({
+  "q": zod.coerce.string().optional().describe('Full-text search on title and parties'),
+  "status": zod.enum(['draft', 'under_review', 'approved', 'rejected']).optional().describe('Filter by status'),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'critical']).optional().describe('Filter by risk level'),
+  "expiresWithin": zod.coerce.number().optional().describe('Filter contracts expiring within N days')
+})
+
 export const ListContractsResponseItem = zod.object({
   "id": zod.number(),
   "title": zod.string(),
@@ -29,6 +36,7 @@ export const ListContractsResponseItem = zod.object({
   "riskLevel": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal('critical'),zod.literal(null)]).nullish(),
   "summaryText": zod.string().nullish(),
   "analyzed": zod.boolean().optional(),
+  "shareToken": zod.string().nullish(),
   "versionCount": zod.number(),
   "commentCount": zod.number(),
   "riskCount": zod.number(),
@@ -56,6 +64,54 @@ export const CreateContractBody = zod.object({
 
 
 /**
+ * @summary Dashboard stats — counts by risk level, recent activity
+ */
+export const GetContractStatsResponse = zod.object({
+  "total": zod.number(),
+  "byStatus": zod.record(zod.string(), zod.number()),
+  "byRiskLevel": zod.record(zod.string(), zod.number()),
+  "recentlyAnalyzed": zod.number(),
+  "totalComments": zod.number(),
+  "totalVersions": zod.number(),
+  "expiringCount": zod.number()
+})
+
+
+/**
+ * @summary List contracts expiring within 30/60/90 days
+ */
+export const listExpiringContractsQueryDaysDefault = 30;
+
+export const ListExpiringContractsQueryParams = zod.object({
+  "days": zod.coerce.number().default(listExpiringContractsQueryDaysDefault).describe('Number of days to look ahead')
+})
+
+export const ListExpiringContractsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "parties": zod.string().nullish(),
+  "expiryDate": zod.string(),
+  "daysUntilExpiry": zod.number(),
+  "riskLevel": zod.string().nullish()
+})
+export const ListExpiringContractsResponse = zod.array(ListExpiringContractsResponseItem)
+
+
+/**
+ * @summary List available contract templates
+ */
+export const ListTemplatesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "content": zod.string()
+})
+export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
+
+
+/**
  * @summary Get contract with latest version
  */
 export const GetContractParams = zod.object({
@@ -72,6 +128,7 @@ export const GetContractResponse = zod.object({
   "riskLevel": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal('critical'),zod.literal(null)]).nullish(),
   "summaryText": zod.string().nullish(),
   "analyzed": zod.boolean().optional(),
+  "shareToken": zod.string().nullish(),
   "content": zod.string(),
   "currentVersionId": zod.number(),
   "createdAt": zod.string(),
@@ -104,6 +161,7 @@ export const UpdateContractResponse = zod.object({
   "riskLevel": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal('critical'),zod.literal(null)]).nullish(),
   "summaryText": zod.string().nullish(),
   "analyzed": zod.boolean().optional(),
+  "shareToken": zod.string().nullish(),
   "versionCount": zod.number(),
   "commentCount": zod.number(),
   "riskCount": zod.number(),
@@ -117,6 +175,19 @@ export const UpdateContractResponse = zod.object({
  */
 export const DeleteContractParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Generate or retrieve a read-only share token for a contract
+ */
+export const ShareContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ShareContractResponse = zod.object({
+  "token": zod.string(),
+  "url": zod.string()
 })
 
 
@@ -269,6 +340,9 @@ export const AnalyzeContractResponse = zod.object({
   "clause": zod.string(),
   "explanation": zod.string(),
   "category": zod.string(),
+  "negotiationStatus": zod.enum(['open', 'accepted', 'rejected', 'negotiating']),
+  "suggestion": zod.string().nullish(),
+  "counterProposal": zod.string().nullish(),
   "createdAt": zod.string()
 }))
 })
@@ -288,9 +362,54 @@ export const ListRisksResponseItem = zod.object({
   "clause": zod.string(),
   "explanation": zod.string(),
   "category": zod.string(),
+  "negotiationStatus": zod.enum(['open', 'accepted', 'rejected', 'negotiating']),
+  "suggestion": zod.string().nullish(),
+  "counterProposal": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListRisksResponse = zod.array(ListRisksResponseItem)
+
+
+/**
+ * @summary Update negotiation status and counter-proposal for a risk
+ */
+export const UpdateRiskParams = zod.object({
+  "id": zod.coerce.number(),
+  "riskId": zod.coerce.number()
+})
+
+export const UpdateRiskBody = zod.object({
+  "negotiationStatus": zod.enum(['open', 'accepted', 'rejected', 'negotiating']).optional(),
+  "counterProposal": zod.string().optional()
+})
+
+export const UpdateRiskResponse = zod.object({
+  "id": zod.number(),
+  "contractId": zod.number(),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'critical']),
+  "clause": zod.string(),
+  "explanation": zod.string(),
+  "category": zod.string(),
+  "negotiationStatus": zod.enum(['open', 'accepted', 'rejected', 'negotiating']),
+  "suggestion": zod.string().nullish(),
+  "counterProposal": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary AI-generate a safer replacement clause for a flagged risk
+ */
+export const SuggestClauseParams = zod.object({
+  "id": zod.coerce.number(),
+  "riskId": zod.coerce.number()
+})
+
+export const SuggestClauseResponse = zod.object({
+  "riskId": zod.number(),
+  "suggestion": zod.string(),
+  "rationale": zod.string().optional()
+})
 
 
 /**
@@ -309,15 +428,34 @@ export const GetContractSummaryResponse = zod.object({
 
 
 /**
- * @summary Dashboard stats — counts by risk level, recent activity
+ * @summary Get a contract via read-only share token
  */
-export const GetContractStatsResponse = zod.object({
-  "total": zod.number(),
-  "byStatus": zod.record(zod.string(), zod.number()),
-  "byRiskLevel": zod.record(zod.string(), zod.number()),
-  "recentlyAnalyzed": zod.number(),
-  "totalComments": zod.number(),
-  "totalVersions": zod.number()
+export const GetSharedContractParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetSharedContractResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "parties": zod.string().nullable(),
+  "effectiveDate": zod.string().nullable(),
+  "expiryDate": zod.string().nullable(),
+  "riskLevel": zod.string().nullable(),
+  "summaryText": zod.string().nullable(),
+  "content": zod.string(),
+  "risks": zod.array(zod.object({
+  "id": zod.number(),
+  "contractId": zod.number(),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'critical']),
+  "clause": zod.string(),
+  "explanation": zod.string(),
+  "category": zod.string(),
+  "negotiationStatus": zod.enum(['open', 'accepted', 'rejected', 'negotiating']),
+  "suggestion": zod.string().nullish(),
+  "counterProposal": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
 })
 
 

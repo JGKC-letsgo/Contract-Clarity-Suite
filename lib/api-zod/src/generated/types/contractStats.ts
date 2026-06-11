@@ -15,4 +15,5 @@ export interface ContractStats {
   recentlyAnalyzed: number;
   totalComments: number;
   totalVersions: number;
+  expiringCount: number;
 }

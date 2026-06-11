@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, LayoutTemplate } from "lucide-react";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -40,6 +42,21 @@ export default function NewContract() {
     }
   });
 
+  // Pick up template from sessionStorage if navigated from Templates page
+  const templateTitle = sessionStorage.getItem("templateTitle");
+  const templateContent = sessionStorage.getItem("templateContent");
+
+  useEffect(() => {
+    if (templateContent) {
+      form.setValue("content", templateContent);
+      sessionStorage.removeItem("templateContent");
+    }
+    if (templateTitle) {
+      form.setValue("title", templateTitle);
+      sessionStorage.removeItem("templateTitle");
+    }
+  }, []);
+
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     createContract.mutate({ data }, {
       onSuccess: (contract) => {
@@ -62,10 +79,24 @@ export default function NewContract() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">New Contract</h1>
-        <p className="text-muted-foreground mt-1 text-sm font-mono">Upload or paste a new contract for analysis.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">New Contract</h1>
+          <p className="text-muted-foreground mt-1 text-sm font-mono">Upload or paste a new contract for analysis.</p>
+        </div>
+        <Button variant="outline" onClick={() => setLocation("/templates")} data-testid="btn-browse-templates">
+          <LayoutTemplate className="h-4 w-4 mr-2" />
+          Browse Templates
+        </Button>
       </div>
+
+      {(templateTitle || form.watch("content")) && form.watch("content").length > 50 && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 border border-primary/20 rounded-md px-4 py-2">
+          <LayoutTemplate className="h-4 w-4 text-primary" />
+          <span>Template loaded — customize the content below before submitting.</span>
+          <Badge variant="secondary" className="ml-auto text-xs">Template</Badge>
+        </div>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>

@@ -21,6 +21,7 @@ import type {
 
 import type {
   AnalysisResult,
+  ClauseSuggestion,
   Comment,
   CommentInput,
   CommentUpdate,
@@ -29,10 +30,17 @@ import type {
   ContractInput,
   ContractStats,
   ContractSummary,
+  ContractTemplate,
   ContractUpdate,
   ContractVersion,
+  ExpiringContract,
   HealthStatus,
+  ListContractsParams,
+  ListExpiringContractsParams,
   RiskHighlight,
+  RiskUpdate,
+  ShareResult,
+  SharedContractDetail,
   VersionInput
 } from './api.schemas';
 
@@ -125,20 +133,27 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
-export const getListContractsUrl = () => {
+export const getListContractsUrl = (params?: ListContractsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/contracts`
+  return stringifiedParams.length > 0 ? `/api/contracts?${stringifiedParams}` : `/api/contracts`
 }
 
 /**
- * @summary List all contracts
+ * @summary List all contracts with optional search/filter
  */
-export const listContracts = async ( options?: RequestInit): Promise<Contract[]> => {
+export const listContracts = async (params?: ListContractsParams, options?: RequestInit): Promise<Contract[]> => {
 
-  return customFetch<Contract[]>(getListContractsUrl(),
+  return customFetch<Contract[]>(getListContractsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -151,23 +166,23 @@ export const listContracts = async ( options?: RequestInit): Promise<Contract[]>
 
 
 
-export const getListContractsQueryKey = () => {
+export const getListContractsQueryKey = (params?: ListContractsParams,) => {
     return [
-    `/api/contracts`
+    `/api/contracts`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContractsQueryOptions = <TData = Awaited<ReturnType<typeof listContracts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListContractsQueryOptions = <TData = Awaited<ReturnType<typeof listContracts>>, TError = ErrorType<unknown>>(params?: ListContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListContractsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListContractsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContracts>>> = ({ signal }) => listContracts({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContracts>>> = ({ signal }) => listContracts(params, { signal, ...requestOptions });
 
 
 
@@ -181,15 +196,15 @@ export type ListContractsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List all contracts
+ * @summary List all contracts with optional search/filter
  */
 
 export function useListContracts<TData = Awaited<ReturnType<typeof listContracts>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListContractsQueryOptions(options)
+  const queryOptions = getListContractsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -272,6 +287,244 @@ export const useCreateContract = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateContractMutationOptions(options));
     }
+
+export const getGetContractStatsUrl = () => {
+
+
+
+
+  return `/api/contracts/stats`
+}
+
+/**
+ * @summary Dashboard stats — counts by risk level, recent activity
+ */
+export const getContractStats = async ( options?: RequestInit): Promise<ContractStats> => {
+
+  return customFetch<ContractStats>(getGetContractStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetContractStatsQueryKey = () => {
+    return [
+    `/api/contracts/stats`
+    ] as const;
+    }
+
+
+export const getGetContractStatsQueryOptions = <TData = Awaited<ReturnType<typeof getContractStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContractStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetContractStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContractStats>>> = ({ signal }) => getContractStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getContractStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetContractStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getContractStats>>>
+export type GetContractStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Dashboard stats — counts by risk level, recent activity
+ */
+
+export function useGetContractStats<TData = Awaited<ReturnType<typeof getContractStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContractStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetContractStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListExpiringContractsUrl = (params?: ListExpiringContractsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/contracts/expiring?${stringifiedParams}` : `/api/contracts/expiring`
+}
+
+/**
+ * @summary List contracts expiring within 30/60/90 days
+ */
+export const listExpiringContracts = async (params?: ListExpiringContractsParams, options?: RequestInit): Promise<ExpiringContract[]> => {
+
+  return customFetch<ExpiringContract[]>(getListExpiringContractsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListExpiringContractsQueryKey = (params?: ListExpiringContractsParams,) => {
+    return [
+    `/api/contracts/expiring`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListExpiringContractsQueryOptions = <TData = Awaited<ReturnType<typeof listExpiringContracts>>, TError = ErrorType<unknown>>(params?: ListExpiringContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExpiringContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListExpiringContractsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listExpiringContracts>>> = ({ signal }) => listExpiringContracts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listExpiringContracts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListExpiringContractsQueryResult = NonNullable<Awaited<ReturnType<typeof listExpiringContracts>>>
+export type ListExpiringContractsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List contracts expiring within 30/60/90 days
+ */
+
+export function useListExpiringContracts<TData = Awaited<ReturnType<typeof listExpiringContracts>>, TError = ErrorType<unknown>>(
+ params?: ListExpiringContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExpiringContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListExpiringContractsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListTemplatesUrl = () => {
+
+
+
+
+  return `/api/contracts/templates`
+}
+
+/**
+ * @summary List available contract templates
+ */
+export const listTemplates = async ( options?: RequestInit): Promise<ContractTemplate[]> => {
+
+  return customFetch<ContractTemplate[]>(getListTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTemplatesQueryKey = () => {
+    return [
+    `/api/contracts/templates`
+    ] as const;
+    }
+
+
+export const getListTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTemplates>>> = ({ signal }) => listTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listTemplates>>>
+export type ListTemplatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List available contract templates
+ */
+
+export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetContractUrl = (id: number,) => {
 
@@ -490,6 +743,76 @@ export const useDeleteContract = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteContractMutationOptions(options));
+    }
+
+export const getShareContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/contracts/${id}/share`
+}
+
+/**
+ * @summary Generate or retrieve a read-only share token for a contract
+ */
+export const shareContract = async (id: number, options?: RequestInit): Promise<ShareResult> => {
+
+  return customFetch<ShareResult>(getShareContractUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getShareContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shareContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof shareContract>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['shareContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shareContract>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  shareContract(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ShareContractMutationResult = NonNullable<Awaited<ReturnType<typeof shareContract>>>
+
+    export type ShareContractMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate or retrieve a read-only share token for a contract
+ */
+export const useShareContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shareContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof shareContract>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getShareContractMutationOptions(options));
     }
 
 export const getListVersionsUrl = (id: number,) => {
@@ -1165,6 +1488,152 @@ export function useListRisks<TData = Awaited<ReturnType<typeof listRisks>>, TErr
 
 
 
+export const getUpdateRiskUrl = (id: number,
+    riskId: number,) => {
+
+
+
+
+  return `/api/contracts/${id}/risks/${riskId}`
+}
+
+/**
+ * @summary Update negotiation status and counter-proposal for a risk
+ */
+export const updateRisk = async (id: number,
+    riskId: number,
+    riskUpdate: RiskUpdate, options?: RequestInit): Promise<RiskHighlight> => {
+
+  return customFetch<RiskHighlight>(getUpdateRiskUrl(id,riskId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      riskUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateRiskMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRisk>>, TError,{id: number;riskId: number;data: BodyType<RiskUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRisk>>, TError,{id: number;riskId: number;data: BodyType<RiskUpdate>}, TContext> => {
+
+const mutationKey = ['updateRisk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRisk>>, {id: number;riskId: number;data: BodyType<RiskUpdate>}> = (props) => {
+          const {id,riskId,data} = props ?? {};
+
+          return  updateRisk(id,riskId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRiskMutationResult = NonNullable<Awaited<ReturnType<typeof updateRisk>>>
+    export type UpdateRiskMutationBody = BodyType<RiskUpdate>
+    export type UpdateRiskMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update negotiation status and counter-proposal for a risk
+ */
+export const useUpdateRisk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRisk>>, TError,{id: number;riskId: number;data: BodyType<RiskUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRisk>>,
+        TError,
+        {id: number;riskId: number;data: BodyType<RiskUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateRiskMutationOptions(options));
+    }
+
+export const getSuggestClauseUrl = (id: number,
+    riskId: number,) => {
+
+
+
+
+  return `/api/contracts/${id}/risks/${riskId}/suggest`
+}
+
+/**
+ * @summary AI-generate a safer replacement clause for a flagged risk
+ */
+export const suggestClause = async (id: number,
+    riskId: number, options?: RequestInit): Promise<ClauseSuggestion> => {
+
+  return customFetch<ClauseSuggestion>(getSuggestClauseUrl(id,riskId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSuggestClauseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestClause>>, TError,{id: number;riskId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof suggestClause>>, TError,{id: number;riskId: number}, TContext> => {
+
+const mutationKey = ['suggestClause'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof suggestClause>>, {id: number;riskId: number}> = (props) => {
+          const {id,riskId} = props ?? {};
+
+          return  suggestClause(id,riskId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SuggestClauseMutationResult = NonNullable<Awaited<ReturnType<typeof suggestClause>>>
+
+    export type SuggestClauseMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-generate a safer replacement clause for a flagged risk
+ */
+export const useSuggestClause = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestClause>>, TError,{id: number;riskId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof suggestClause>>,
+        TError,
+        {id: number;riskId: number},
+        TContext
+      > => {
+      return useMutation(getSuggestClauseMutationOptions(options));
+    }
+
 export const getGetContractSummaryUrl = (id: number,) => {
 
 
@@ -1242,20 +1711,20 @@ export function useGetContractSummary<TData = Awaited<ReturnType<typeof getContr
 
 
 
-export const getGetContractStatsUrl = () => {
+export const getGetSharedContractUrl = (token: string,) => {
 
 
 
 
-  return `/api/contracts/stats`
+  return `/api/shared/${token}`
 }
 
 /**
- * @summary Dashboard stats — counts by risk level, recent activity
+ * @summary Get a contract via read-only share token
  */
-export const getContractStats = async ( options?: RequestInit): Promise<ContractStats> => {
+export const getSharedContract = async (token: string, options?: RequestInit): Promise<SharedContractDetail> => {
 
-  return customFetch<ContractStats>(getGetContractStatsUrl(),
+  return customFetch<SharedContractDetail>(getGetSharedContractUrl(token),
   {
     ...options,
     method: 'GET'
@@ -1268,45 +1737,45 @@ export const getContractStats = async ( options?: RequestInit): Promise<Contract
 
 
 
-export const getGetContractStatsQueryKey = () => {
+export const getGetSharedContractQueryKey = (token: string,) => {
     return [
-    `/api/contracts/stats`
+    `/api/shared/${token}`
     ] as const;
     }
 
 
-export const getGetContractStatsQueryOptions = <TData = Awaited<ReturnType<typeof getContractStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContractStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetSharedContractQueryOptions = <TData = Awaited<ReturnType<typeof getSharedContract>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSharedContract>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetContractStatsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetSharedContractQueryKey(token);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContractStats>>> = ({ signal }) => getContractStats({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedContract>>> = ({ signal }) => getSharedContract(token, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getContractStats>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSharedContract>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetContractStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getContractStats>>>
-export type GetContractStatsQueryError = ErrorType<unknown>
+export type GetSharedContractQueryResult = NonNullable<Awaited<ReturnType<typeof getSharedContract>>>
+export type GetSharedContractQueryError = ErrorType<void>
 
 
 /**
- * @summary Dashboard stats — counts by risk level, recent activity
+ * @summary Get a contract via read-only share token
  */
 
-export function useGetContractStats<TData = Awaited<ReturnType<typeof getContractStats>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContractStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useGetSharedContract<TData = Awaited<ReturnType<typeof getSharedContract>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSharedContract>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetContractStatsQueryOptions(options)
+  const queryOptions = getGetSharedContractQueryOptions(token,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

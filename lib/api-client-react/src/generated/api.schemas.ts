@@ -47,6 +47,8 @@ export interface Contract {
   /** @nullable */
   summaryText?: string | null;
   analyzed?: boolean;
+  /** @nullable */
+  shareToken?: string | null;
   versionCount: number;
   commentCount: number;
   riskCount: number;
@@ -92,6 +94,8 @@ export interface ContractDetail {
   /** @nullable */
   summaryText?: string | null;
   analyzed?: boolean;
+  /** @nullable */
+  shareToken?: string | null;
   content: string;
   currentVersionId: number;
   createdAt: string;
@@ -194,6 +198,16 @@ export const RiskHighlightRiskLevel = {
   critical: 'critical',
 } as const;
 
+export type RiskHighlightNegotiationStatus = typeof RiskHighlightNegotiationStatus[keyof typeof RiskHighlightNegotiationStatus];
+
+
+export const RiskHighlightNegotiationStatus = {
+  open: 'open',
+  accepted: 'accepted',
+  rejected: 'rejected',
+  negotiating: 'negotiating',
+} as const;
+
 export interface RiskHighlight {
   id: number;
   contractId: number;
@@ -201,7 +215,33 @@ export interface RiskHighlight {
   clause: string;
   explanation: string;
   category: string;
+  negotiationStatus: RiskHighlightNegotiationStatus;
+  /** @nullable */
+  suggestion?: string | null;
+  /** @nullable */
+  counterProposal?: string | null;
   createdAt: string;
+}
+
+export type RiskUpdateNegotiationStatus = typeof RiskUpdateNegotiationStatus[keyof typeof RiskUpdateNegotiationStatus];
+
+
+export const RiskUpdateNegotiationStatus = {
+  open: 'open',
+  accepted: 'accepted',
+  rejected: 'rejected',
+  negotiating: 'negotiating',
+} as const;
+
+export interface RiskUpdate {
+  negotiationStatus?: RiskUpdateNegotiationStatus;
+  counterProposal?: string;
+}
+
+export interface ClauseSuggestion {
+  riskId: number;
+  suggestion: string;
+  rationale?: string;
 }
 
 export type AnalysisResultRiskLevel = typeof AnalysisResultRiskLevel[keyof typeof AnalysisResultRiskLevel];
@@ -253,5 +293,95 @@ export interface ContractStats {
   recentlyAnalyzed: number;
   totalComments: number;
   totalVersions: number;
+  expiringCount: number;
 }
+
+export interface ExpiringContract {
+  id: number;
+  title: string;
+  status: string;
+  /** @nullable */
+  parties?: string | null;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  /** @nullable */
+  riskLevel?: string | null;
+}
+
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  content: string;
+}
+
+export interface ShareResult {
+  token: string;
+  url: string;
+}
+
+export interface SharedContractDetail {
+  id: number;
+  title: string;
+  status: string;
+  /** @nullable */
+  parties: string | null;
+  /** @nullable */
+  effectiveDate: string | null;
+  /** @nullable */
+  expiryDate: string | null;
+  /** @nullable */
+  riskLevel: string | null;
+  /** @nullable */
+  summaryText: string | null;
+  content: string;
+  risks: RiskHighlight[];
+}
+
+export type ListContractsParams = {
+/**
+ * Full-text search on title and parties
+ */
+q?: string;
+/**
+ * Filter by status
+ */
+status?: ListContractsStatus;
+/**
+ * Filter by risk level
+ */
+riskLevel?: ListContractsRiskLevel;
+/**
+ * Filter contracts expiring within N days
+ */
+expiresWithin?: number;
+};
+
+export type ListContractsStatus = typeof ListContractsStatus[keyof typeof ListContractsStatus];
+
+
+export const ListContractsStatus = {
+  draft: 'draft',
+  under_review: 'under_review',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export type ListContractsRiskLevel = typeof ListContractsRiskLevel[keyof typeof ListContractsRiskLevel];
+
+
+export const ListContractsRiskLevel = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+export type ListExpiringContractsParams = {
+/**
+ * Number of days to look ahead
+ */
+days?: number;
+};
 

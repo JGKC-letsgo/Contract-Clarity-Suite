@@ -23,6 +23,8 @@ export interface Contract {
   /** @nullable */
   summaryText?: string | null;
   analyzed?: boolean;
+  /** @nullable */
+  shareToken?: string | null;
   versionCount: number;
   commentCount: number;
   riskCount: number;

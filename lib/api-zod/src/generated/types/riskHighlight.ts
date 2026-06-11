@@ -5,6 +5,7 @@
  * Contract Review API
  * OpenAPI spec version: 0.1.0
  */
+import type { RiskHighlightNegotiationStatus } from './riskHighlightNegotiationStatus';
 import type { RiskHighlightRiskLevel } from './riskHighlightRiskLevel';
 
 export interface RiskHighlight {
@@ -14,5 +15,10 @@ export interface RiskHighlight {
   clause: string;
   explanation: string;
   category: string;
+  negotiationStatus: RiskHighlightNegotiationStatus;
+  /** @nullable */
+  suggestion?: string | null;
+  /** @nullable */
+  counterProposal?: string | null;
   createdAt: string;
 }

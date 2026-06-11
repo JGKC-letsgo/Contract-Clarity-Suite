@@ -18,6 +18,10 @@ tags:
     description: Inline comments
   - name: risks
     description: Risk analysis
+  - name: templates
+    description: Contract templates
+  - name: shared
+    description: Shared contract access
 paths:
   /healthz:
     get:
@@ -36,7 +40,34 @@ paths:
     get:
       operationId: listContracts
       tags: [contracts]
-      summary: List all contracts
+      summary: List all contracts with optional search/filter
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Full-text search on title and parties
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, under_review, approved, rejected]
+          description: Filter by status
+        - name: riskLevel
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+          description: Filter by risk level
+        - name: expiresWithin
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Filter contracts expiring within N days
       responses:
         "200":
           description: List of contracts
@@ -63,6 +94,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Contract"
+
+  /contracts/stats:
+    get:
+      operationId: getContractStats
+      tags: [contracts]
+      summary: Dashboard stats — counts by risk level, recent activity
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractStats"
+
+  /contracts/expiring:
+    get:
+      operationId: listExpiringContracts
+      tags: [contracts]
+      summary: List contracts expiring within 30/60/90 days
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+          description: Number of days to look ahead
+      responses:
+        "200":
+          description: List of expiring contracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpiringContract"
+
+  /contracts/templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List available contract templates
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContractTemplate"
 
   /contracts/{id}:
     get:
@@ -120,6 +202,25 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /contracts/{id}/share:
+    post:
+      operationId: shareContract
+      tags: [contracts]
+      summary: Generate or retrieve a read-only share token for a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Share token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareResult"
 
   /contracts/{id}/versions:
     get:
@@ -321,6 +422,60 @@ paths:
                 items:
                   $ref: "#/components/schemas/RiskHighlight"
 
+  /contracts/{id}/risks/{riskId}:
+    patch:
+      operationId: updateRisk
+      tags: [risks]
+      summary: Update negotiation status and counter-proposal for a risk
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: riskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskUpdate"
+      responses:
+        "200":
+          description: Updated risk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskHighlight"
+
+  /contracts/{id}/risks/{riskId}/suggest:
+    post:
+      operationId: suggestClause
+      tags: [risks]
+      summary: AI-generate a safer replacement clause for a flagged risk
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: riskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Suggested replacement clause
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClauseSuggestion"
+
   /contracts/{id}/summary:
     get:
       operationId: getContractSummary
@@ -340,18 +495,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractSummary"
 
-  /contracts/stats:
+  /shared/{token}:
     get:
-      operationId: getContractStats
-      tags: [contracts]
-      summary: Dashboard stats — counts by risk level, recent activity
+      operationId: getSharedContract
+      tags: [shared]
+      summary: Get a contract via read-only share token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
-          description: Stats
+          description: Shared contract detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ContractStats"
+                $ref: "#/components/schemas/SharedContractDetail"
+        "404":
+          description: Not found or token invalid
 
 components:
   schemas:
@@ -387,6 +550,8 @@ components:
           type: ["string", "null"]
         analyzed:
           type: boolean
+        shareToken:
+          type: ["string", "null"]
         versionCount:
           type: integer
         commentCount:
@@ -422,6 +587,8 @@ components:
           type: ["string", "null"]
         analyzed:
           type: boolean
+        shareToken:
+          type: ["string", "null"]
         content:
           type: string
         currentVersionId:
@@ -547,7 +714,7 @@ components:
 
     RiskHighlight:
       type: object
-      required: [id, contractId, riskLevel, clause, explanation, category, createdAt]
+      required: [id, contractId, riskLevel, clause, explanation, category, negotiationStatus, createdAt]
       properties:
         id:
           type: integer
@@ -562,7 +729,34 @@ components:
           type: string
         category:
           type: string
+        negotiationStatus:
+          type: string
+          enum: [open, accepted, rejected, negotiating]
+        suggestion:
+          type: ["string", "null"]
+        counterProposal:
+          type: ["string", "null"]
         createdAt:
+          type: string
+
+    RiskUpdate:
+      type: object
+      properties:
+        negotiationStatus:
+          type: string
+          enum: [open, accepted, rejected, negotiating]
+        counterProposal:
+          type: string
+
+    ClauseSuggestion:
+      type: object
+      required: [riskId, suggestion]
+      properties:
+        riskId:
+          type: integer
+        suggestion:
+          type: string
+        rationale:
           type: string
 
     AnalysisResult:
@@ -595,7 +789,7 @@ components:
 
     ContractStats:
       type: object
-      required: [total, byStatus, byRiskLevel, recentlyAnalyzed, totalComments, totalVersions]
+      required: [total, byStatus, byRiskLevel, recentlyAnalyzed, totalComments, totalVersions, expiringCount]
       properties:
         total:
           type: integer
@@ -613,3 +807,75 @@ components:
           type: integer
         totalVersions:
           type: integer
+        expiringCount:
+          type: integer
+
+    ExpiringContract:
+      type: object
+      required: [id, title, status, expiryDate, daysUntilExpiry]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        status:
+          type: string
+        parties:
+          type: ["string", "null"]
+        expiryDate:
+          type: string
+        daysUntilExpiry:
+          type: integer
+        riskLevel:
+          type: ["string", "null"]
+
+    ContractTemplate:
+      type: object
+      required: [id, name, description, category, content]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        content:
+          type: string
+
+    ShareResult:
+      type: object
+      required: [token, url]
+      properties:
+        token:
+          type: string
+        url:
+          type: string
+
+    SharedContractDetail:
+      type: object
+      required: [id, title, status, content, parties, effectiveDate, expiryDate, riskLevel, summaryText, risks]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        status:
+          type: string
+        parties:
+          type: ["string", "null"]
+        effectiveDate:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
+        riskLevel:
+          type: ["string", "null"]
+        summaryText:
+          type: ["string", "null"]
+        content:
+          type: string
+        risks:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskHighlight"

@@ -10,6 +10,9 @@ export const riskHighlightsTable = pgTable("risk_highlights", {
   clause: text("clause").notNull(),
   explanation: text("explanation").notNull(),
   category: text("category").notNull(),
+  negotiationStatus: text("negotiation_status").notNull().default("open"),
+  suggestion: text("suggestion"),
+  counterProposal: text("counter_proposal"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

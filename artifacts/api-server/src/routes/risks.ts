@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { contractsTable, contractVersionsTable, riskHighlightsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
-import { AnalyzeContractParams, ListRisksParams, GetContractSummaryParams } from "@workspace/api-zod";
+import { AnalyzeContractParams, ListRisksParams, GetContractSummaryParams, UpdateRiskParams, UpdateRiskBody, SuggestClauseParams } from "@workspace/api-zod";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -81,10 +81,8 @@ Rules:
       return res.status(500).json({ error: "Failed to parse AI analysis" });
     }
 
-    // Delete existing risks for this contract
     await db.delete(riskHighlightsTable).where(eq(riskHighlightsTable.contractId, contract.id));
 
-    // Insert new risks
     const insertedRisks = await Promise.all(
       (analysisData.risks ?? []).map(async (risk) => {
         const [inserted] = await db.insert(riskHighlightsTable).values({
@@ -93,12 +91,14 @@ Rules:
           clause: risk.clause,
           explanation: risk.explanation,
           category: risk.category,
+          negotiationStatus: "open",
+          suggestion: null,
+          counterProposal: null,
         }).returning();
         return inserted;
       })
     );
 
-    // Update contract with summary and risk level
     await db.update(contractsTable).set({
       summaryText: analysisData.summary,
       riskLevel: analysisData.riskLevel,
@@ -110,6 +110,8 @@ Rules:
       riskLevel: analysisData.riskLevel,
       risks: insertedRisks.map((r) => ({
         ...r,
+        suggestion: r.suggestion ?? null,
+        counterProposal: r.counterProposal ?? null,
         createdAt: r.createdAt.toISOString(),
       })),
     });
@@ -134,12 +136,107 @@ router.get("/contracts/:id/risks", async (req, res) => {
     return res.json(
       risks.map((r) => ({
         ...r,
+        suggestion: r.suggestion ?? null,
+        counterProposal: r.counterProposal ?? null,
         createdAt: r.createdAt.toISOString(),
       }))
     );
   } catch (err) {
     req.log.error({ err }, "Failed to list risks");
     return res.status(500).json({ error: "Failed to list risks" });
+  }
+});
+
+// PATCH /contracts/:id/risks/:riskId — update negotiation status / counter-proposal
+router.patch("/contracts/:id/risks/:riskId", async (req, res) => {
+  try {
+    const params = UpdateRiskParams.safeParse({
+      id: Number(req.params.id),
+      riskId: Number(req.params.riskId),
+    });
+    if (!params.success) return res.status(400).json({ error: "Invalid params" });
+
+    const body = UpdateRiskBody.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: body.error.message });
+
+    const updateData: Partial<typeof riskHighlightsTable.$inferInsert> = {};
+    if (body.data.negotiationStatus !== undefined) updateData.negotiationStatus = body.data.negotiationStatus;
+    if (body.data.counterProposal !== undefined) updateData.counterProposal = body.data.counterProposal;
+
+    const [updated] = await db
+      .update(riskHighlightsTable)
+      .set(updateData)
+      .where(eq(riskHighlightsTable.id, params.data.riskId))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Risk not found" });
+
+    return res.json({
+      ...updated,
+      suggestion: updated.suggestion ?? null,
+      counterProposal: updated.counterProposal ?? null,
+      createdAt: updated.createdAt.toISOString(),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update risk");
+    return res.status(500).json({ error: "Failed to update risk" });
+  }
+});
+
+// POST /contracts/:id/risks/:riskId/suggest — AI clause suggestion
+router.post("/contracts/:id/risks/:riskId/suggest", async (req, res) => {
+  try {
+    const params = SuggestClauseParams.safeParse({
+      id: Number(req.params.id),
+      riskId: Number(req.params.riskId),
+    });
+    if (!params.success) return res.status(400).json({ error: "Invalid params" });
+
+    const [risk] = await db.select().from(riskHighlightsTable).where(eq(riskHighlightsTable.id, params.data.riskId));
+    if (!risk) return res.status(404).json({ error: "Risk not found" });
+
+    const [contract] = await db.select().from(contractsTable).where(eq(contractsTable.id, params.data.id));
+    if (!contract) return res.status(404).json({ error: "Contract not found" });
+
+    const prompt = `You are an expert contract attorney. A contract has a risky clause that needs a safer replacement.
+
+Contract: ${contract.title}
+Risk Category: ${risk.category}
+Risk Level: ${risk.riskLevel}
+Problematic Clause: "${risk.clause}"
+Why It's Risky: ${risk.explanation}
+
+Write a safer, balanced replacement clause that protects both parties fairly. Return ONLY valid JSON (no markdown):
+{
+  "suggestion": "The exact replacement clause text — clear, professional, and legally balanced",
+  "rationale": "1-2 sentences explaining what was changed and why this version is better"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 600,
+    });
+
+    const responseText = completion.choices[0]?.message?.content ?? "";
+    let data: { suggestion: string; rationale: string };
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      return res.status(500).json({ error: "Failed to parse suggestion" });
+    }
+
+    // Save suggestion back to the risk
+    await db.update(riskHighlightsTable).set({ suggestion: data.suggestion }).where(eq(riskHighlightsTable.id, risk.id));
+
+    return res.json({
+      riskId: risk.id,
+      suggestion: data.suggestion,
+      rationale: data.rationale ?? "",
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to suggest clause");
+    return res.status(500).json({ error: "Failed to generate clause suggestion" });
   }
 });
 

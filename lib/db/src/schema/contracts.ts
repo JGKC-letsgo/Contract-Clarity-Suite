@@ -12,6 +12,7 @@ export const contractsTable = pgTable("contracts", {
   riskLevel: text("risk_level"),
   summaryText: text("summary_text"),
   analyzed: boolean("analyzed").notNull().default(false),
+  shareToken: text("share_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
