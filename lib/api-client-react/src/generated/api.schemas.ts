@@ -321,6 +321,23 @@ export interface ShareResult {
   url: string;
 }
 
+export interface UploadResult {
+  extractedText: string;
+  suggestedTitle: string;
+  filename: string;
+}
+
+export interface SendExpiryAlertsInput {
+  to: string;
+  days?: number;
+}
+
+export interface SendExpiryAlertsResult {
+  sent: number;
+  to?: string;
+  message?: string;
+}
+
 export interface SharedContractDetail {
   id: number;
   title: string;
@@ -383,5 +400,9 @@ export type ListExpiringContractsParams = {
  * Number of days to look ahead
  */
 days?: number;
+};
+
+export type UploadContractFileBody = {
+  file: Blob;
 };
 

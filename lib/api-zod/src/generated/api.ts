@@ -112,6 +112,35 @@ export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
 
 
 /**
+ * @summary Upload a PDF or DOCX file and extract its text
+ */
+export const UploadContractFileBody = zod.object({
+  "file": zod.instanceof(File)
+})
+
+export const UploadContractFileResponse = zod.object({
+  "extractedText": zod.string(),
+  "suggestedTitle": zod.string(),
+  "filename": zod.string()
+})
+
+
+/**
+ * @summary Send expiry alert email for contracts expiring soon
+ */
+export const SendExpiryAlertsBody = zod.object({
+  "to": zod.string(),
+  "days": zod.number().optional()
+})
+
+export const SendExpiryAlertsResponse = zod.object({
+  "sent": zod.number(),
+  "to": zod.string().optional(),
+  "message": zod.string().optional()
+})
+
+
+/**
  * @summary Get contract with latest version
  */
 export const GetContractParams = zod.object({

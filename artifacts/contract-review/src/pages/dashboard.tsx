@@ -7,16 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, AlertTriangle, Clock, Search, CalendarX, X, LayoutTemplate } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Plus, FileText, AlertTriangle, Clock, Search, CalendarX, X, LayoutTemplate, Mail, Loader2 } from "lucide-react";
 import { ContractStatusBadge } from "@/components/contract/status-badge";
 import { RiskBadge } from "@/components/contract/risk-badge";
 import { formatDate } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@clerk/react";
 
 export default function Dashboard() {
   const [searchQ, setSearchQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [riskFilter, setRiskFilter] = useState<string>("all");
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [alertEmail, setAlertEmail] = useState("");
+  const [alertDays, setAlertDays] = useState("30");
+  const [sendingAlerts, setSendingAlerts] = useState(false);
+  const { toast } = useToast();
+  const { user } = useUser();
 
   const contractParams = {
     ...(searchQ ? { q: searchQ } : {}),
@@ -38,6 +48,32 @@ export default function Dashboard() {
     setRiskFilter("all");
   };
 
+  const handleSendAlerts = async () => {
+    if (!alertEmail) return;
+    setSendingAlerts(true);
+    try {
+      const res = await fetch("/api/contracts/send-expiry-alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ to: alertEmail, days: parseInt(alertDays) || 30 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({
+        title: data.sent > 0 ? `Sent ${data.sent} alert${data.sent === 1 ? "" : "s"}` : "No alerts needed",
+        description: data.sent > 0
+          ? `Expiry alert emailed to ${alertEmail}.`
+          : data.message || "No contracts expiring in that window.",
+      });
+      setAlertDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: "Failed to send", description: err.message, variant: "destructive" });
+    } finally {
+      setSendingAlerts(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       {/* Header */}
@@ -47,6 +83,10 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1 text-sm font-mono">System Overview & Active Contracts</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setAlertEmail(user?.emailAddresses?.[0]?.emailAddress ?? ""); setAlertDialogOpen(true); }} data-testid="btn-email-alerts">
+            <Mail className="h-4 w-4 mr-2" />
+            Email Alerts
+          </Button>
           <Link href="/templates">
             <Button variant="outline" data-testid="btn-templates">
               <LayoutTemplate className="h-4 w-4 mr-2" />
@@ -61,6 +101,49 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      <Dialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Expiry Alert Email</DialogTitle>
+            <DialogDescription>Get an email summary of contracts expiring soon.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="alert-email">Recipient Email</Label>
+              <Input
+                id="alert-email"
+                type="email"
+                placeholder="you@example.com"
+                value={alertEmail}
+                onChange={(e) => setAlertEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="alert-days">Expiring within (days)</Label>
+              <Select value={alertDays} onValueChange={setAlertDays}>
+                <SelectTrigger id="alert-days">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="14">14 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                  <SelectItem value="60">60 days</SelectItem>
+                  <SelectItem value="90">90 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAlertDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendAlerts} disabled={sendingAlerts || !alertEmail}>
+              {sendingAlerts && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Send Alert
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Cards */}
       {loadingStats ? (

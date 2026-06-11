@@ -146,6 +146,51 @@ paths:
                 items:
                   $ref: "#/components/schemas/ContractTemplate"
 
+  /contracts/upload:
+    post:
+      operationId: uploadContractFile
+      tags: [contracts]
+      summary: Upload a PDF or DOCX file and extract its text
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Extracted text and suggested title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+        "400":
+          description: Bad request (no file or unsupported type)
+
+  /contracts/send-expiry-alerts:
+    post:
+      operationId: sendExpiryAlerts
+      tags: [contracts]
+      summary: Send expiry alert email for contracts expiring soon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendExpiryAlertsInput"
+      responses:
+        "200":
+          description: Result of alert sending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendExpiryAlertsResult"
+
   /contracts/{id}:
     get:
       operationId: getContract
@@ -851,6 +896,37 @@ components:
         token:
           type: string
         url:
+          type: string
+
+    UploadResult:
+      type: object
+      required: [extractedText, suggestedTitle, filename]
+      properties:
+        extractedText:
+          type: string
+        suggestedTitle:
+          type: string
+        filename:
+          type: string
+
+    SendExpiryAlertsInput:
+      type: object
+      required: [to]
+      properties:
+        to:
+          type: string
+        days:
+          type: integer
+
+    SendExpiryAlertsResult:
+      type: object
+      required: [sent]
+      properties:
+        sent:
+          type: integer
+        to:
+          type: string
+        message:
           type: string
 
     SharedContractDetail:

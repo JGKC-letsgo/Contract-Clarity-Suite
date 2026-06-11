@@ -18,8 +18,25 @@ import {
   ShareContractParams,
   ListContractsQueryParams,
 } from "@workspace/api-zod";
+import { getAuth } from "@clerk/express";
+import multer from "multer";
+import mammoth from "mammoth";
+import { createRequire } from "node:module";
+const _require = createRequire(import.meta.url);
+type PdfParseResult = { text: string; numpages: number };
+const pdfParse = _require("pdf-parse") as (buf: Buffer, opts?: object) => Promise<PdfParseResult>;
 
 const router = Router();
+
+const requireAuth = (req: any, res: any, next: any) => {
+  const auth = getAuth(req);
+  const userId = auth?.userId;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  req.userId = userId;
+  next();
+};
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const CONTRACT_TEMPLATES = [
   {
@@ -296,6 +313,124 @@ router.get("/contracts/templates", async (_req, res) => {
   return res.json(CONTRACT_TEMPLATES);
 });
 
+// POST /contracts/upload — extract text from PDF or DOCX
+router.post("/contracts/upload", requireAuth, upload.single("file"), async (req: any, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const { mimetype, buffer, originalname } = req.file;
+    let extractedText = "";
+
+    if (mimetype === "application/pdf") {
+      const result = await pdfParse(buffer);
+      extractedText = result.text;
+    } else if (
+      mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      mimetype === "application/msword" ||
+      originalname.endsWith(".docx") ||
+      originalname.endsWith(".doc")
+    ) {
+      const result = await mammoth.extractRawText({ buffer });
+      extractedText = result.value;
+    } else if (mimetype === "text/plain") {
+      extractedText = buffer.toString("utf-8");
+    } else {
+      return res.status(400).json({ error: "Unsupported file type. Please upload PDF, DOCX, or TXT." });
+    }
+
+    // Clean up extra whitespace
+    extractedText = extractedText.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+
+    // Try to extract a title from the first non-empty line
+    const firstLine = extractedText.split("\n").find(l => l.trim().length > 3)?.trim() ?? "";
+    const suggestedTitle = firstLine.slice(0, 100) || originalname.replace(/\.[^.]+$/, "");
+
+    return res.json({ extractedText, suggestedTitle, filename: originalname });
+  } catch (err) {
+    req.log.error({ err }, "Failed to parse uploaded file");
+    return res.status(500).json({ error: "Failed to parse file" });
+  }
+});
+
+// POST /contracts/send-expiry-alerts — send email via Resend
+router.post("/contracts/send-expiry-alerts", requireAuth, async (req: any, res) => {
+  try {
+    const { to, days = 30 } = req.body as { to: string; days?: number };
+    if (!to) return res.status(400).json({ error: "Recipient email is required" });
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: "Email service not configured. Add RESEND_API_KEY to secrets." });
+
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    const allContracts = await db.select().from(contractsTable).orderBy(contractsTable.expiryDate);
+
+    const expiring = allContracts.filter(c => {
+      if (!c.expiryDate) return false;
+      try {
+        const d = new Date(c.expiryDate);
+        return d >= now && d <= cutoff;
+      } catch { return false; }
+    }).map(c => {
+      const d = new Date(c.expiryDate!);
+      const daysLeft = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return { ...c, daysLeft };
+    });
+
+    if (expiring.length === 0) {
+      return res.json({ sent: 0, message: "No expiring contracts found." });
+    }
+
+    const rows = expiring.map(c =>
+      `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">${c.title}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">${c.parties ?? "—"}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:${c.daysLeft <= 7 ? "#dc2626" : "#d97706"};">${c.daysLeft} days (${c.expiryDate})</td>
+      </tr>`
+    ).join("");
+
+    const html = `
+      <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <h2 style="color:#1e293b;margin-bottom:4px;">⚠️ Contract Expiry Alert</h2>
+        <p style="color:#64748b;margin-bottom:24px;">${expiring.length} contract${expiring.length === 1 ? "" : "s"} expiring within ${days} days.</p>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#334155;">Contract</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#334155;">Parties</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#334155;">Expires In</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p style="color:#94a3b8;font-size:12px;margin-top:24px;">Sent by Legalese — Contract Intelligence</p>
+      </div>
+    `;
+
+    const emailRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        from: "Legalese <alerts@legalese.app>",
+        to: [to],
+        subject: `⚠️ ${expiring.length} Contract${expiring.length === 1 ? "" : "s"} Expiring Within ${days} Days`,
+        html,
+      }),
+    });
+
+    if (!emailRes.ok) {
+      const body = await emailRes.text();
+      req.log.error({ status: emailRes.status, body }, "Resend API error");
+      return res.status(502).json({ error: "Failed to send email" });
+    }
+
+    return res.json({ sent: expiring.length, to });
+  } catch (err) {
+    req.log.error({ err }, "Failed to send expiry alerts");
+    return res.status(500).json({ error: "Failed to send expiry alerts" });
+  }
+});
+
 // GET /contracts
 router.get("/contracts", async (req, res) => {
   try {
@@ -371,7 +506,7 @@ router.get("/contracts", async (req, res) => {
 });
 
 // POST /contracts
-router.post("/contracts", async (req, res) => {
+router.post("/contracts", requireAuth, async (req: any, res) => {
   try {
     const parsed = CreateContractBody.safeParse(req.body);
     if (!parsed.success) {
@@ -386,6 +521,7 @@ router.post("/contracts", async (req, res) => {
       effectiveDate: effectiveDate ?? null,
       expiryDate: expiryDate ?? null,
       analyzed: false,
+      userId: req.userId ?? null,
     }).returning();
 
     await db.insert(contractVersionsTable).values({

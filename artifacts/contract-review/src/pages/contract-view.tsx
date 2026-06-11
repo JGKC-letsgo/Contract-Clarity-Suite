@@ -317,7 +317,6 @@ export default function ContractView({ id }: { id: number }) {
                 <div><strong>Parties:</strong> {contract.parties || "-"}</div>
                 <div><strong>Effective:</strong> {formatDate(contract.effectiveDate)}</div>
                 <div><strong>Expiry:</strong> {formatDate(contract.expiryDate)}</div>
-                <div><strong>Versions:</strong> {contract.versionCount}</div>
               </div>
             </div>
             <div className="font-serif text-lg leading-relaxed text-foreground/90 pb-32">
@@ -354,7 +353,7 @@ export default function ContractView({ id }: { id: number }) {
                       return (
                         <Card
                           key={risk.id}
-                          ref={(el) => riskRefs.current[risk.id] = el}
+                          ref={(el) => { riskRefs.current[risk.id] = el; }}
                           className={cn(
                             "transition-all border-l-4",
                             selectedRiskId === risk.id ? "ring-2 ring-primary border-transparent" : "",

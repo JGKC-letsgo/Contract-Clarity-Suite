@@ -52,7 +52,8 @@ export default function ContractComments({ id }: { id: number }) {
 
   const handleResolve = (commentId: number, resolved: boolean) => {
     updateComment.mutate({
-      id: commentId,
+      id,
+      commentId,
       data: { resolved }
     }, {
       onSuccess: () => {
@@ -63,7 +64,7 @@ export default function ContractComments({ id }: { id: number }) {
 
   const handleDelete = (commentId: number) => {
     if (window.confirm("Delete this comment?")) {
-      deleteComment.mutate({ id: commentId }, {
+      deleteComment.mutate({ id, commentId }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getGetContractQueryKey(id) });

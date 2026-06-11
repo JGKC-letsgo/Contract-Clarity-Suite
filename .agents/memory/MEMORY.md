@@ -1,0 +1,1 @@
+- [Legalese project setup](legalese-setup.md) — Clerk proxy pattern, pdf-parse ESM workaround, Tailwind v4+Clerk CSS ordering, route ordering constraint

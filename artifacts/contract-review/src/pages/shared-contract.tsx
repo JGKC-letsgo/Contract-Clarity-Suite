@@ -54,8 +54,8 @@ export default function SharedContract({ token }: { token: string }) {
           <div className="flex-1">
             <h1 className="text-2xl font-bold tracking-tight">{contract.title}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <ContractStatusBadge status={contract.status} />
-              <RiskBadge level={contract.riskLevel} />
+              <ContractStatusBadge status={contract.status as "draft" | "under_review" | "approved" | "rejected"} />
+              <RiskBadge level={contract.riskLevel as "low" | "medium" | "high" | "critical" | null | undefined} />
             </div>
           </div>
         </div>

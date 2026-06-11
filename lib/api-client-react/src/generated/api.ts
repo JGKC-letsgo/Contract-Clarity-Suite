@@ -39,8 +39,12 @@ import type {
   ListExpiringContractsParams,
   RiskHighlight,
   RiskUpdate,
+  SendExpiryAlertsInput,
+  SendExpiryAlertsResult,
   ShareResult,
   SharedContractDetail,
+  UploadContractFileBody,
+  UploadResult,
   VersionInput
 } from './api.schemas';
 
@@ -525,6 +529,150 @@ export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates
 
 
 
+
+export const getUploadContractFileUrl = () => {
+
+
+
+
+  return `/api/contracts/upload`
+}
+
+/**
+ * @summary Upload a PDF or DOCX file and extract its text
+ */
+export const uploadContractFile = async (uploadContractFileBody: UploadContractFileBody, options?: RequestInit): Promise<UploadResult> => {
+    const formData = new FormData();
+formData.append(`file`, uploadContractFileBody.file);
+
+  return customFetch<UploadResult>(getUploadContractFileUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getUploadContractFileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadContractFile>>, TError,{data: BodyType<UploadContractFileBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadContractFile>>, TError,{data: BodyType<UploadContractFileBody>}, TContext> => {
+
+const mutationKey = ['uploadContractFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadContractFile>>, {data: BodyType<UploadContractFileBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadContractFile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadContractFileMutationResult = NonNullable<Awaited<ReturnType<typeof uploadContractFile>>>
+    export type UploadContractFileMutationBody = BodyType<UploadContractFileBody>
+    export type UploadContractFileMutationError = ErrorType<void>
+
+    /**
+ * @summary Upload a PDF or DOCX file and extract its text
+ */
+export const useUploadContractFile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadContractFile>>, TError,{data: BodyType<UploadContractFileBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadContractFile>>,
+        TError,
+        {data: BodyType<UploadContractFileBody>},
+        TContext
+      > => {
+      return useMutation(getUploadContractFileMutationOptions(options));
+    }
+
+export const getSendExpiryAlertsUrl = () => {
+
+
+
+
+  return `/api/contracts/send-expiry-alerts`
+}
+
+/**
+ * @summary Send expiry alert email for contracts expiring soon
+ */
+export const sendExpiryAlerts = async (sendExpiryAlertsInput: SendExpiryAlertsInput, options?: RequestInit): Promise<SendExpiryAlertsResult> => {
+
+  return customFetch<SendExpiryAlertsResult>(getSendExpiryAlertsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sendExpiryAlertsInput,)
+  }
+);}
+
+
+
+
+export const getSendExpiryAlertsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendExpiryAlerts>>, TError,{data: BodyType<SendExpiryAlertsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendExpiryAlerts>>, TError,{data: BodyType<SendExpiryAlertsInput>}, TContext> => {
+
+const mutationKey = ['sendExpiryAlerts'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendExpiryAlerts>>, {data: BodyType<SendExpiryAlertsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendExpiryAlerts(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendExpiryAlertsMutationResult = NonNullable<Awaited<ReturnType<typeof sendExpiryAlerts>>>
+    export type SendExpiryAlertsMutationBody = BodyType<SendExpiryAlertsInput>
+    export type SendExpiryAlertsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Send expiry alert email for contracts expiring soon
+ */
+export const useSendExpiryAlerts = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendExpiryAlerts>>, TError,{data: BodyType<SendExpiryAlertsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendExpiryAlerts>>,
+        TError,
+        {data: BodyType<SendExpiryAlertsInput>},
+        TContext
+      > => {
+      return useMutation(getSendExpiryAlertsMutationOptions(options));
+    }
 
 export const getGetContractUrl = (id: number,) => {
 
