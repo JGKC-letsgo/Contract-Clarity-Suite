@@ -17,7 +17,7 @@ A single buried clause, unlimited liability, a one-sided termination right, an a
 
 ## Try it
 
-Live on Replit: https://replit.com/@jeangankc/Contract-Clarity-Suite
+https://contract-clarity-suite.replit.app
 
 ## Built with
 
